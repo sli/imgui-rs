@@ -288,6 +288,22 @@ impl<'ui> DrawListMut<'ui> {
         BezierCurve::new(self, pos0, cp0, cp1, pos1, color)
     }
 
+    /// Returns an arc with the specified measurements.
+    #[doc(alias = "ArcTo")]
+    pub fn add_arc_to<C>(
+        &'ui self,
+        center: [f32; 2],
+        radius: f32,
+        angle_min: f32,
+        angle_max: f32,
+        color: C,
+    ) -> ArcTo<'ui>
+    where
+        C: Into<ImColor32>,
+    {
+        ArcTo::new(self, center, radius, angle_min, angle_max, color)
+    }
+
     /// Push a clipping rectangle on the stack, run `f` and pop it.
     ///
     /// Clip all drawings done within the closure `f` in the given
@@ -721,6 +737,99 @@ impl<'ui> BezierCurve<'ui> {
                 self.thickness,
                 self.num_segments.unwrap_or(0) as i32,
             )
+        }
+    }
+}
+
+/// Represents an Arc to be drawn. Called an ArcTo as to not be confused
+/// with the builtin atomically reference counted pointer type.
+#[must_use = "should call .build() to draw the object"]
+pub struct ArcTo<'ui> {
+    center: [f32; 2],
+    radius: f32,
+    color: ImColor32,
+    thickness: f32,
+    closed: bool,
+    angle_min: f32,
+    angle_max: f32,
+    num_segments: u32,
+    draw_list: &'ui DrawListMut<'ui>,
+}
+
+impl<'ui> ArcTo<'ui> {
+    /// Typically constructed by [`DrawListMut::add_arc_to`]
+    pub fn new<C>(
+        draw_list: &'ui DrawListMut,
+        center: [f32; 2],
+        radius: f32,
+        angle_min: f32,
+        angle_max: f32,
+        color: C,
+    ) -> Self
+    where
+        C: Into<ImColor32>,
+    {
+        Self {
+            center,
+            radius,
+            angle_min,
+            angle_max,
+            color: color.into(),
+            draw_list,
+            num_segments: 0,
+            closed: false,
+            thickness: 0.0,
+        }
+    }
+
+    /// Set number of segment used to draw the arc, default to 0.
+    /// Add more segments if you want a smoother arc.
+    pub fn num_segments(mut self, num_segments: u32) -> Self {
+        self.num_segments = num_segments;
+        self
+    }
+
+    /// Set the minimum angle of the arc.
+    pub fn angle_min(mut self, angle_min: f32) -> Self {
+        self.angle_min = angle_min;
+        self
+    }
+
+    /// Set the maximum angle of the arc.
+    pub fn angle_max(mut self, angle_max: f32) -> Self {
+        self.angle_max = angle_max;
+        self
+    }
+
+    /// Set stroke thickness.
+    pub fn thickness(mut self, thickness: f32) -> Self {
+        self.thickness = thickness;
+        self
+    }
+
+    /// Set path closed. (default false)
+    pub fn closed(mut self, closed: bool) -> Self {
+        self.closed = closed;
+        self
+    }
+
+    pub fn build(self) {
+        unsafe {
+            sys::ImDrawList_PathArcTo(
+                self.draw_list.draw_list,
+                self.center.into(),
+                self.radius,
+                self.angle_min,
+                self.angle_max,
+                self.num_segments as i32,
+            );
+
+            sys::ImDrawList_PathStroke(
+                self.draw_list.draw_list,
+                self.color.into(),
+                self.closed,
+                self.thickness,
+            );
         }
     }
 }
