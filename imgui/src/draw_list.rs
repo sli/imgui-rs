@@ -747,12 +747,12 @@ impl<'ui> BezierCurve<'ui> {
 pub struct ArcTo<'ui> {
     center: [f32; 2],
     radius: f32,
-    color: ImColor32,
-    thickness: f32,
-    closed: bool,
     angle_min: f32,
     angle_max: f32,
+    stroke: ImColor32,
     num_segments: u32,
+    thickness: f32,
+    closed: bool,
     draw_list: &'ui DrawListMut<'ui>,
 }
 
@@ -764,7 +764,7 @@ impl<'ui> ArcTo<'ui> {
         radius: f32,
         angle_min: f32,
         angle_max: f32,
-        color: C,
+        stroke: C,
     ) -> Self
     where
         C: Into<ImColor32>,
@@ -774,11 +774,11 @@ impl<'ui> ArcTo<'ui> {
             radius,
             angle_min,
             angle_max,
-            color: color.into(),
-            draw_list,
+            stroke: stroke.into(),
             num_segments: 0,
-            closed: false,
             thickness: 0.0,
+            closed: false,
+            draw_list,
         }
     }
 
@@ -789,7 +789,7 @@ impl<'ui> ArcTo<'ui> {
         self
     }
 
-    /// Set the minimum angle of the arc.
+    /// Set the minimum angle of the arc. (default 0.0)
     pub fn angle_min(mut self, angle_min: f32) -> Self {
         self.angle_min = angle_min;
         self
@@ -813,8 +813,19 @@ impl<'ui> ArcTo<'ui> {
         self
     }
 
+    /// Change stroke color.
+    pub fn stroke<C>(mut self, stroke: C) -> Self
+    where
+        C: Into<ImColor32>,
+    {
+        self.stroke = stroke.into();
+        self
+    }
+
     pub fn build(self) {
         unsafe {
+            sys::ImDrawList_PushClipRectFullScreen(self.draw_list.draw_list);
+
             sys::ImDrawList_PathArcTo(
                 self.draw_list.draw_list,
                 self.center.into(),
@@ -826,10 +837,14 @@ impl<'ui> ArcTo<'ui> {
 
             sys::ImDrawList_PathStroke(
                 self.draw_list.draw_list,
-                self.color.into(),
+                self.stroke.into(),
                 self.closed,
                 self.thickness,
             );
+
+            sys::ImDrawList_PopClipRect(self.draw_list.draw_list);
+
+            // sys::ImDrawList_PathFill(self.draw_list.draw_list, self.stroke.into());
         }
     }
 }
