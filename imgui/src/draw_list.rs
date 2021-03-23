@@ -824,7 +824,9 @@ impl<'ui> ArcTo<'ui> {
 
     pub fn build(self) {
         unsafe {
-            sys::ImDrawList_PushClipRectFullScreen(self.draw_list.draw_list);
+            // sys::ImDrawList_PushClipRectFullScreen(self.draw_list.draw_list);
+
+            sys::ImDrawList_PathClear(self.draw_list.draw_list);
 
             sys::ImDrawList_PathArcTo(
                 self.draw_list.draw_list,
@@ -842,7 +844,7 @@ impl<'ui> ArcTo<'ui> {
                 self.thickness,
             );
 
-            sys::ImDrawList_PopClipRect(self.draw_list.draw_list);
+            // sys::ImDrawList_PopClipRect(self.draw_list.draw_list);
 
             // sys::ImDrawList_PathFill(self.draw_list.draw_list, self.stroke.into());
         }
